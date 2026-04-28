@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Download, Loader2, Image as ImageIcon, CheckCircle, AlertCircle, FileArchive, Code, Globe, ExternalLink } from "lucide-react";
+import { Download, Loader2, Image as ImageIcon, CheckCircle, AlertCircle, FileArchive, Code, Globe, ExternalLink, Star, X } from "lucide-react";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import Image from "next/image";
@@ -19,6 +19,17 @@ export default function Home() {
   const [results, setResults] = useState<GeneratedImage[]>([]);
   const [isDownloading, setIsDownloading] = useState(false);
   const [showFormatNotice, setShowFormatNotice] = useState(false);
+  const [showStarPopup, setShowStarPopup] = useState(false);
+  
+  useEffect(() => {
+    // 50% chance to show the popup after 12 seconds
+    const timer = setTimeout(() => {
+      if (Math.random() > 0.5) {
+        setShowStarPopup(true);
+      }
+    }, 12000);
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleGenerate = async () => {
     // If text contains spaces (a paragraph), format it and prevent generation until reviewed
@@ -290,6 +301,53 @@ export default function Home() {
           </div>
         </motion.div>
       </main>
+
+      {/* Random GitHub Star Popup */}
+      <AnimatePresence>
+        {showStarPopup && (
+          <motion.div
+            initial={{ opacity: 0, x: 50, y: 20 }}
+            animate={{ opacity: 1, x: 0, y: 0 }}
+            exit={{ opacity: 0, x: 50, scale: 0.9 }}
+            className="fixed bottom-6 right-6 bg-zinc-900 border border-zinc-800 rounded-2xl p-5 shadow-2xl max-w-sm z-50 flex flex-col gap-3"
+          >
+            <button 
+              onClick={() => setShowStarPopup(false)}
+              className="absolute top-3 right-3 text-zinc-500 hover:text-white transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-yellow-500/10 text-yellow-500 rounded-lg shrink-0 mt-1">
+                <Star className="w-5 h-5 fill-yellow-500" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-white mb-1">Find this useful?</h3>
+                <p className="text-sm text-zinc-400 leading-relaxed mb-3 pr-4">
+                  If this tool saved you some time, consider giving it a star on GitHub!
+                </p>
+                <div className="flex gap-3">
+                  <a 
+                    href="https://github.com/praveenjadhav1510/landsat" 
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => setShowStarPopup(false)}
+                    className="inline-flex items-center justify-center gap-2 bg-white text-black px-4 py-2 rounded-lg text-sm font-semibold hover:bg-zinc-200 transition-colors flex-1"
+                  >
+                    <Code className="w-4 h-4" /> Star Repo
+                  </a>
+                  <button 
+                    onClick={() => setShowStarPopup(false)}
+                    className="inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium text-zinc-400 hover:bg-zinc-800 hover:text-white transition-colors"
+                  >
+                    Maybe later
+                  </button>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

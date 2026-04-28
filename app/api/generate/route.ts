@@ -29,7 +29,7 @@ export async function POST(request: Request) {
       browser = await playwrightCore.chromium.launch({
         args: chromium.args,
         executablePath: await chromium.executablePath(),
-        headless: chromium.headless,
+        headless: true, // Fix: Sparticuz runs headless on Vercel
       });
     }
 
