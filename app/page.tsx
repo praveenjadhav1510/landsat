@@ -18,8 +18,24 @@ export default function Home() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [results, setResults] = useState<GeneratedImage[]>([]);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [showFormatNotice, setShowFormatNotice] = useState(false);
 
   const handleGenerate = async () => {
+    // If text contains spaces (a paragraph), format it and prevent generation until reviewed
+    if (inputText.includes(" ")) {
+      const formatted = inputText
+        .split(/\s+/)
+        .filter((w) => w.trim().length > 0)
+        .join("\n");
+        
+      if (formatted !== inputText.trim()) {
+        setInputText(formatted);
+        setShowFormatNotice(true);
+        setTimeout(() => setShowFormatNotice(false), 4000);
+        return; // Intercept and stop generation
+      }
+    }
+
     const words = inputText
       .split("\n")
       .map((w) => w.trim())
@@ -111,11 +127,26 @@ export default function Home() {
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.1 }}
-          className="w-full max-w-2xl bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-3xl p-6 shadow-2xl"
+          className="w-full max-w-2xl bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-3xl p-6 shadow-2xl relative"
         >
+          {/* Format Notification Toast */}
+          <AnimatePresence>
+            {showFormatNotice && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className="absolute -top-12 left-1/2 -translate-x-1/2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2"
+              >
+                <CheckCircle className="w-4 h-4" />
+                Text formatted, please review once.
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           <div className="mb-4">
-            <label htmlFor="words" className="block text-sm font-medium text-zinc-400 mb-2">
-              Enter words (one per line)
+            <label htmlFor="words" className="block text-sm font-medium text-zinc-400 mb-2 flex justify-between">
+              <span>Enter words (one per line)</span>
             </label>
             <textarea
               id="words"
