@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Prevent Next.js bundler from relocating the Sparticuz chromium binary
+  serverExternalPackages: ['@sparticuz/chromium', 'playwright-core'],
 };
 
 export default nextConfig;
