@@ -4,7 +4,15 @@ import chromium from '@sparticuz/chromium';
 // Force dynamic execution for API route in Next.js App Router
 export const dynamic = 'force-dynamic';
 // Vercel serverless functions need more time for Playwright
-export const maxDuration = 60; 
+export const maxDuration = 60;
+
+// The chromium pack URL for the version matching @sparticuz/chromium in package.json.
+// This is downloaded at runtime to /tmp/chromium and cached on warm starts.
+// Vercel bundles relocate the local `bin/` folder, so we must use a remote URL.
+// Check https://github.com/Sparticuz/chromium/releases for the correct version.
+const CHROMIUM_PACK_URL =
+  process.env.CHROMIUM_PACK_URL ??
+  'https://github.com/Sparticuz/chromium/releases/download/v148.0.0/chromium-v148.0.0-pack.x64.tar';
 
 const isDev = process.env.NODE_ENV === 'development';
 
@@ -17,19 +25,23 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Please provide an array of words.' }, { status: 400 });
     }
 
-    const generatedUrls: { word: string, url: string, error?: string }[] = [];
+    const generatedUrls: { word: string; url: string; error?: string }[] = [];
 
     // Launch browser dynamically based on environment
     if (isDev) {
+      // In development, use the full playwright package (installed locally)
       const { chromium: localChromium } = await import('playwright');
       browser = await localChromium.launch({ headless: true });
     } else {
-      const playwrightCore = await import('playwright-core');
+      // In production (Vercel serverless), use playwright-core + @sparticuz/chromium.
+      // We pass the remote pack URL so chromium downloads the binary to /tmp at runtime,
+      // which avoids the "bin directory does not exist" error caused by bundler relocation.
+      const { chromium: playwrightChromium } = await import('playwright-core');
       chromium.setGraphicsMode = false;
-      browser = await playwrightCore.chromium.launch({
+      browser = await playwrightChromium.launch({
         args: chromium.args,
-        executablePath: await chromium.executablePath(),
-        headless: true, // Fix: Sparticuz runs headless on Vercel
+        executablePath: await chromium.executablePath(CHROMIUM_PACK_URL),
+        headless: true,
       });
     }
 
@@ -91,12 +103,19 @@ export async function POST(request: Request) {
       }
     }
 
+    // In Playwright, browser.close() closes all contexts and pages automatically.
     await browser.close();
 
     return NextResponse.json({ results: generatedUrls }, { status: 200 });
 
   } catch (error: any) {
-    if (browser) await browser.close();
+    if (browser) {
+      try {
+        await browser.close();
+      } catch {
+        // swallow close errors — we already have the real error
+      }
+    }
     console.error('API Error:', error);
     return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
   }
